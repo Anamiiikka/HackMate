@@ -8,6 +8,7 @@ const {
   cancelRequest
 } = require('../controllers/requestController');
 const { authenticateToken } = require('../middleware/auth');
+const { requestSendLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ const validate = (req, res, next) => {
 };
 
 // POST /api/v1/requests
-router.post('/', authenticateToken, [
+router.post('/', authenticateToken, requestSendLimiter, [
   body('to_user_id').isUUID().withMessage('Valid to_user_id required'),
   body('hackathon_id').isUUID().withMessage('Valid hackathon_id required'),
   body('message').optional().isLength({ max: 300 }).withMessage('Message max 300 chars'),

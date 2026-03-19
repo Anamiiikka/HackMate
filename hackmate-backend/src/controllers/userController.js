@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const cache = require('../services/cacheService');
 
 // ── GET /users/me ─────────────────────────────────────
 const getMyProfile = async (req, res) => {
@@ -55,6 +56,8 @@ const updateMyProfile = async (req, res) => {
       [bio, github_url, linkedin_url, timezone, location, experience_level, avatar_url, id]
     );
 
+    await cache.del(`profile:${id}`);
+
     return res.status(200).json({
       message: 'Profile updated',
       user: result.rows[0]
@@ -91,6 +94,10 @@ const updateMySkills = async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // invalidate all recommendations involving this user
+    await cache.delPattern(`recommendations:${id}:*`);
+    await cache.del(`profile:${id}`);
 
     // return updated skills list
     const result = await pool.query(

@@ -1,5 +1,6 @@
 const express  = require('express');
 const { body, validationResult } = require('express-validator');
+const { authLimiter } = require('../middleware/rateLimiter');
 const { register, login, refresh, logout } = require('../controllers/authController');
 
 const router = express.Router();
@@ -13,7 +14,7 @@ const validate = (req, res, next) => {
 };
 
 // POST /api/v1/auth/register
-router.post('/register', [
+router.post('/register', authLimiter, [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
   body('password').isLength({ min: 8 }).withMessage('Password min 8 characters'),
@@ -21,7 +22,7 @@ router.post('/register', [
 ], register);
 
 // POST /api/v1/auth/login
-router.post('/login', [
+router.post('/login', authLimiter, [
   body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
   body('password').notEmpty().withMessage('Password required'),
   validate

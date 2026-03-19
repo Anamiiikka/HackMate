@@ -1,5 +1,6 @@
 const jwt  = require('jsonwebtoken');
 const pool = require('../config/db');
+const redis = require('../config/redis');
 
 const setupSocket = (io) => {
 
@@ -60,6 +61,15 @@ const setupSocket = (io) => {
 
       if (content.length > 2000) {
         socket.emit('error', { message: 'Message too long (max 2000 chars)' });
+        return;
+      }
+
+      // Redis-backed per-user message rate limit (60 msg/min)
+      const msgKey   = `ratelimit:message:${socket.user.id}`;
+      const msgCount = await redis.incr(msgKey);
+      if (msgCount === 1) await redis.expire(msgKey, 60);
+      if (msgCount > 60) {
+        socket.emit('error', { message: 'Slow down! Max 60 messages per minute.' });
         return;
       }
 

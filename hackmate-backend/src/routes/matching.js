@@ -2,6 +2,7 @@ const express = require('express');
 const { param, validationResult } = require('express-validator');
 const { getRecommendationsHandler } = require('../controllers/matchingController');
 const { authenticateToken } = require('../middleware/auth');
+const { matchingLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const validate = (req, res, next) => {
 };
 
 // GET /api/v1/hackathons/:id/recommendations
-router.get('/:id/recommendations', authenticateToken, [
+router.get('/:id/recommendations', authenticateToken, matchingLimiter, [
   param('id').isUUID().withMessage('Valid hackathon UUID required'),
   validate
 ], getRecommendationsHandler);

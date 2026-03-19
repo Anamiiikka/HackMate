@@ -29,10 +29,10 @@ const spec = YAML.load(path.join(__dirname, 'docs/openapi.yaml'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(spec));
 
 // Routes
-app.use('/api/v1/auth', require('./routes/auth'));
-// app.use('/api/v1/users',         require('./routes/users'));
-// app.use('/api/v1/hackathons',    require('./routes/hackathons'));
-// app.use('/api/v1/matching',      require('./routes/matching'));
+app.use('/api/v1/auth',       require('./routes/auth'));
+app.use('/api/v1/users',      require('./routes/users'));
+app.use('/api/v1/hackathons', require('./routes/hackathons'));
+app.use('/api/v1/hackathons', require('./routes/matching'));
 // app.use('/api/v1/requests',      require('./routes/requests'));
 // app.use('/api/v1/conversations', require('./routes/conversations'));
 

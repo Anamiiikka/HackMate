@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { NotificationBell } from "./NotificationBell";
 
 export default function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -53,6 +54,13 @@ export default function Navbar() {
               <Link href="/dashboard" className={`text-sm tracking-wide transition-colors ${pathname.includes("/dashboard") ? "text-white" : "text-neutral-400 hover:text-white"}`}>
                 Dashboard
               </Link>
+              <Link href="/teams" className={`text-sm tracking-wide transition-colors ${pathname.includes("/teams") ? "text-white" : "text-neutral-400 hover:text-white"}`}>
+                Teams
+              </Link>
+              <Link href="/requests" className={`text-sm tracking-wide transition-colors ${pathname.includes("/requests") ? "text-white" : "text-neutral-400 hover:text-white"}`}>
+                Requests
+              </Link>
+              <NotificationBell />
               <div className="h-4 w-px bg-white/20 mx-2" />
               <span className="text-sm text-neutral-300">Hi, {userName.split(" ")[0]}</span>
               <button 

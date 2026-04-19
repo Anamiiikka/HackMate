@@ -6,7 +6,8 @@ const {
   updateMySkills,
   addAvailability,
   deleteAvailability,
-  getUserById
+  getUserById,
+  getPotentialMatches
 } = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -18,6 +19,9 @@ const validate = (req, res, next) => {
     return res.status(400).json({ errors: errors.array() });
   next();
 };
+
+// GET /users/potential-matches
+router.get('/potential-matches', authenticateToken, getPotentialMatches);
 
 // GET /users/me
 router.get('/me', authenticateToken, getMyProfile);

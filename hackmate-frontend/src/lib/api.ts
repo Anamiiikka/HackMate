@@ -50,3 +50,36 @@ export const apiFetch = async (endpoint: string, options: FetchOptions = {}) => 
     throw error;
   }
 };
+
+// Helper object for common HTTP methods
+export const api = {
+  get: (endpoint: string, options: FetchOptions = {}) =>
+    apiFetch(endpoint, { ...options, method: 'GET', requireAuth: true }),
+
+  post: (endpoint: string, data?: unknown, options: FetchOptions = {}) =>
+    apiFetch(endpoint, {
+      ...options,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+      requireAuth: true,
+    }),
+
+  patch: (endpoint: string, data?: unknown, options: FetchOptions = {}) =>
+    apiFetch(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+      requireAuth: true,
+    }),
+
+  delete: (endpoint: string, options: FetchOptions = {}) =>
+    apiFetch(endpoint, { ...options, method: 'DELETE', requireAuth: true }),
+
+  put: (endpoint: string, data?: unknown, options: FetchOptions = {}) =>
+    apiFetch(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+      requireAuth: true,
+    }),
+};

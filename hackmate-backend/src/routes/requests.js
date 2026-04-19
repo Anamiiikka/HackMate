@@ -5,7 +5,8 @@ const {
   getIncomingRequests,
   getOutgoingRequests,
   respondToRequest,
-  cancelRequest
+  cancelRequest,
+  sendConnectionRequest
 } = require('../controllers/requestController');
 const { authenticateToken } = require('../middleware/auth');
 const { requestSendLimiter } = require('../middleware/rateLimiter');
@@ -18,6 +19,12 @@ const validate = (req, res, next) => {
     return res.status(400).json({ errors: errors.array() });
   next();
 };
+
+// POST /api/v1/requests/send
+router.post('/send', authenticateToken, [
+  body('receiverId').isUUID().withMessage('Valid receiverId required'),
+  validate
+], sendConnectionRequest);
 
 // POST /api/v1/requests
 router.post('/', authenticateToken, requestSendLimiter, [

@@ -3,8 +3,8 @@ const cache = require('../services/cacheService');
 
 const getHackathons = async (req, res) => {
   try {
-    const { mode } = req.query;
-    const cacheKey = `hackathons:${mode || 'all'}`;
+    const { mode, location, tech_focus } = req.query;
+    const cacheKey = `hackathons:${mode || 'all'}:${location || 'all'}:${tech_focus || 'all'}`;
 
     const cached = await cache.get(cacheKey);
     if (cached) return res.status(200).json({ ...cached, cached: true });
@@ -14,8 +14,21 @@ const getHackathons = async (req, res) => {
                          tech_focus, website_url
                   FROM hackathons WHERE is_active = TRUE`;
     const params = [];
+    let paramIndex = 1;
 
-    if (mode) { params.push(mode); query += ` AND mode = $1`; }
+    if (mode) {
+      query += ` AND mode = $${paramIndex++}`;
+      params.push(mode);
+    }
+    if (location) {
+      query += ` AND location ILIKE $${paramIndex++}`;
+      params.push(`%${location}%`);
+    }
+    if (tech_focus) {
+      query += ` AND tech_focus ILIKE $${paramIndex++}`;
+      params.push(`%${tech_focus}%`);
+    }
+    
     query += ' ORDER BY start_date ASC';
 
     console.log('📝 Executing query:', query, 'with params:', params);
@@ -98,4 +111,55 @@ const joinHackathon = async (req, res) => {
   }
 };
 
-module.exports = { getHackathons, getSkills, joinHackathon };
+const getHackathonById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cacheKey = `hackathon:${id}`;
+
+    const cached = await cache.get(cacheKey);
+    if (cached) return res.status(200).json({ ...cached, cached: true });
+
+    const result = await pool.query(
+      `SELECT id, name, description, start_date, end_date,
+              mode, location, max_team_size, min_team_size,
+              tech_focus, website_url
+       FROM hackathons WHERE id = $1 AND is_active = TRUE`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Hackathon not found' });
+    }
+
+    const response = { hackathon: result.rows[0] };
+    await cache.set(cacheKey, response, cache.TTL.HACKATHONS);
+    return res.status(200).json(response);
+
+  } catch (err) {
+    console.error('getHackathonById error:', err.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const createHackathon = async (req, res) => {
+  try {
+    const { name, description, start_date, end_date, location, mode } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO hackathons (name, description, start_date, end_date, location, mode)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [name, description, start_date, end_date, location, mode]
+    );
+
+    return res.status(201).json({
+      message: 'Hackathon created successfully',
+      hackathon: result.rows[0],
+    });
+  } catch (err) {
+    console.error('createHackathon error:', err.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = { getHackathons, getSkills, joinHackathon, getHackathonById, createHackathon };

@@ -220,11 +220,79 @@ const getUserById = async (req, res) => {
   }
 };
 
+const getPotentialMatches = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const { skills } = req.query; // e.g., "react,node.js"
+
+    // Find users that the current user has already interacted with
+    const sentRequests = await pool.query(
+      `SELECT receiver_id FROM requests WHERE sender_id = $1`,
+      [id]
+    );
+    const receivedRequests = await pool.query(
+      `SELECT sender_id FROM requests WHERE receiver_id = $1`,
+      [id]
+    );
+
+    const sentIds = sentRequests.rows.map(r => r.receiver_id);
+    const receivedIds = receivedRequests.rows.map(r => r.sender_id);
+    const excludedIds = [...new Set([...sentIds, ...receivedIds, id])]; // Exclude self and interacted users
+
+    let usersQuery = `
+      SELECT u.id, u.name, u.username, u.email, u.bio, u.avatar_url
+      FROM users u
+    `;
+    const queryParams = [excludedIds];
+    let paramIndex = 2;
+
+    if (skills) {
+      const skillList = skills.split(',').map(s => s.trim().toLowerCase());
+      usersQuery += `
+        JOIN user_skills us ON u.id = us.user_id
+        JOIN skills s ON us.skill_id = s.id
+        WHERE u.id != ANY($1)
+        AND LOWER(s.name) = ANY($${paramIndex++})
+        GROUP BY u.id
+        HAVING COUNT(DISTINCT LOWER(s.name)) = $${paramIndex++}
+      `;
+      queryParams.push(skillList);
+      queryParams.push(skillList.length);
+    } else {
+      usersQuery += ` WHERE u.id != ANY($1)`;
+    }
+
+    const usersResult = await pool.query(usersQuery, queryParams);
+
+    // For each user, fetch their skills
+    const usersWithSkills = await Promise.all(usersResult.rows.map(async (user) => {
+      const skillsResult = await pool.query(
+        `SELECT s.name
+         FROM user_skills us
+         JOIN skills s ON s.id = us.skill_id
+         WHERE us.user_id = $1`,
+        [user.id]
+      );
+      return {
+        ...user,
+        skills: skillsResult.rows.map(s => s.name),
+      };
+    }));
+
+    return res.status(200).json(usersWithSkills);
+
+  } catch (err) {
+    console.error('getPotentialMatches error:', err.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getMyProfile,
   updateMyProfile,
   updateMySkills,
   addAvailability,
   deleteAvailability,
-  getUserById
+  getUserById,
+  getPotentialMatches
 };

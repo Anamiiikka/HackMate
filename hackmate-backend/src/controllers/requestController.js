@@ -323,10 +323,57 @@ const cancelRequest = async (req, res) => {
   }
 };
 
+const sendConnectionRequest = async (req, res) => {
+  try {
+    const { id: senderId } = req.user;
+    const { receiverId } = req.body;
+
+    if (senderId === receiverId) {
+      return res.status(400).json({ error: 'You cannot send a request to yourself.' });
+    }
+
+    // Check if a request already exists
+    const existingRequest = await pool.query(
+      `SELECT id FROM requests WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)`,
+      [senderId, receiverId]
+    );
+
+    if (existingRequest.rows.length > 0) {
+      return res.status(409).json({ error: 'A request has already been sent.' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO requests (sender_id, receiver_id, status) VALUES ($1, $2, 'pending') RETURNING *`,
+      [senderId, receiverId]
+    );
+
+    // Create notification for the receiver
+    const { createNotification } = require('./notificationController');
+    const sender = await pool.query('SELECT name FROM users WHERE id = $1', [senderId]);
+    const senderName = sender.rows[0]?.name || 'Someone';
+    
+    await createNotification(
+      receiverId,
+      'new_request',
+      `${senderName} sent you a connection request!`,
+      `/requests`
+    );
+
+    return res.status(201).json({
+      message: 'Request sent successfully',
+      request: result.rows[0],
+    });
+  } catch (err) {
+    console.error('sendConnectionRequest error:', err.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   sendRequest,
   getIncomingRequests,
   getOutgoingRequests,
   respondToRequest,
-  cancelRequest
+  cancelRequest,
+  sendConnectionRequest
 };

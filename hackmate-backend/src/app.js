@@ -10,6 +10,11 @@ const YAML       = require('yamljs');
 const path       = require('path');
 
 const setupSocket = require('./socket/chatSocket');
+const requestRoutes = require('./routes/requests');
+const matchingRoutes = require('./routes/matching');
+const conversationRoutes = require('./routes/conversations');
+const teamRoutes = require('./routes/teams');
+const notificationRoutes = require('./routes/notifications');
 
 const app    = express();
 const server = http.createServer(app);         // raw http server
@@ -50,6 +55,8 @@ app.use('/api/v1/hackathons',    require('./routes/hackathons'));
 app.use('/api/v1/hackathons',    require('./routes/matching'));
 app.use('/api/v1/requests',      require('./routes/requests'));
 app.use('/api/v1/conversations', require('./routes/conversations'));
+app.use('/api/v1/teams', teamRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // ── WebSocket ─────────────────────────────────────────
 setupSocket(io);

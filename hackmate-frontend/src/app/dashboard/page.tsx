@@ -5,10 +5,12 @@ import { apiFetch } from "@/lib/api";
 import Link from "next/link";
 
 interface Match {
-  user_id: string;
-  name: string;
-  match_score: number;
-  skills: any[];
+  user: {
+    id: string;
+    name: string;
+    skills: any[];
+  };
+  score: number;
 }
 
 interface Hackathon {
@@ -54,9 +56,13 @@ export default function Dashboard() {
         const data = await apiFetch(`/hackathons/${selectedHackathon}/recommendations?limit=10`, {
           requireAuth: true
         });
-        setMatches(data.recommendations || []);
+        if (data.joined === false) {
+          setError(data.error);
+        } else {
+          setMatches(data.recommendations || []);
+        }
       } catch (err: any) {
-        // If 400 You must join, we catch it here.
+        // Fallback for other errors
         setError(err.message);
       } finally {
         setFetchingMatches(false);
@@ -123,26 +129,26 @@ export default function Dashboard() {
           ) : (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {matches.map(m => (
-                 <div key={m.user_id} className="bg-black/40 border border-white/5 rounded-xl p-5 hover:border-violet-500/30 transition-colors">
+                 <div key={m.user.id} className="bg-black/40 border border-white/5 rounded-xl p-5 hover:border-violet-500/30 transition-colors">
                    <div className="flex justify-between items-start mb-3">
-                     <h3 className="font-semibold text-white text-lg">{m.name}</h3>
+                     <h3 className="font-semibold text-white text-lg">{m.user.name}</h3>
                      <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md">
-                       {m.match_score}% Match
+                       {m.score}% Match
                      </span>
                    </div>
                    
                    {/* We only render skills if the backend sends it via the matching engine */}
                    <div className="flex flex-wrap gap-2 mt-4">
-                     {m.skills && m.skills.map((s: any) => (
-                       <span key={s.id} className="text-xs bg-neutral-800 text-neutral-300 px-2 py-1 rounded">
-                         {s.name}
+                     {m.user.skills && m.user.skills.map((s: any) => (
+                       <span key={s.skill_id || s.id} className="text-xs bg-neutral-800 text-neutral-300 px-2 py-1 rounded border border-white/10">
+                         {s.name || `Skill ${s.skill_id.substring(0, 4)}`}
                        </span>
                      ))}
                    </div>
                    
-                   <button className="w-full mt-6 bg-white/5 hover:bg-white/10 text-white text-sm py-2 rounded-lg transition-colors border border-white/10">
+                   <Link href={`/users/${m.user.id}`} className="block text-center w-full mt-6 bg-white/5 hover:bg-white/10 text-white text-sm py-2 rounded-lg transition-colors border border-white/10">
                      View Profile
-                   </button>
+                   </Link>
                  </div>
                ))}
              </div>

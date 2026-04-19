@@ -18,15 +18,18 @@ const getHackathons = async (req, res) => {
     if (mode) { params.push(mode); query += ` AND mode = $1`; }
     query += ' ORDER BY start_date ASC';
 
+    console.log('📝 Executing query:', query, 'with params:', params);
     const result   = await pool.query(query, params);
+    console.log('✅ Query successful, rows:', result.rows.length);
     const response = { hackathons: result.rows };
 
     await cache.set(cacheKey, response, cache.TTL.HACKATHONS);
     return res.status(200).json(response);
 
   } catch (err) {
-    console.error('getHackathons error:', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ getHackathons error:', err.message);
+    console.error('   Stack:', err.stack);
+    return res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 };
 

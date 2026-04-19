@@ -15,8 +15,10 @@ const getRecommendationsHandler = async (req, res) => {
       [userId, hackathonId]
     );
     if (joined.rows.length === 0)
-      return res.status(400).json({
-        error: 'You must join this hackathon pool before getting recommendations'
+      return res.status(200).json({
+        joined: false,
+        error: 'You must join this hackathon pool before getting recommendations',
+        recommendations: []
       });
 
     // check cache first

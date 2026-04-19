@@ -22,23 +22,31 @@ export const apiFetch = async (endpoint: string, options: FetchOptions = {}) => 
     }
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...customOptions,
-    headers,
-  });
+  const url = `${BASE_URL}${endpoint}`;
+  console.log('📡 API Request:', url);
 
-  if (!response.ok) {
-    // If 401, we might want to trigger a logout or refresh
-    if (response.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        window.dispatchEvent(new Event('auth-change'));
+  try {
+    const response = await fetch(url, {
+      ...customOptions,
+      headers,
+    });
+
+    if (!response.ok) {
+      // If 401, we might want to trigger a logout or refresh
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          window.dispatchEvent(new Event('auth-change'));
+        }
       }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Request failed with status ${response.status}`);
     }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Request failed with status ${response.status}`);
-  }
 
-  return response.json();
+    return response.json();
+  } catch (error) {
+    console.error('❌ API Error:', error, 'URL:', url);
+    throw error;
+  }
 };

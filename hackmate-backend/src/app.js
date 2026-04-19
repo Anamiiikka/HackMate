@@ -23,6 +23,10 @@ const io     = new Server(server, {
 // ── Middleware ────────────────────────────────────────
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.path}`);
+  next();
+});
 app.use(express.json());
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,

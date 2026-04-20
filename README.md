@@ -1,25 +1,65 @@
 # HackMate 🚀
 
-> Smart hackathon teammate matching platform — find teammates by tech stack, availability, and experience level with real-time chat.
+> **A smart hackathon teammate matching platform built for speed and precision.** HackMate helps you discover hackathons, find teammates perfectly matched by tech stack and availability, and instantly collaborate through real-time team Chat.
 
-HackMate consists of a **Next.js frontend** and an **Express.js backend** connected via a Next.js proxy.
+<div align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js" alt="Next.js" />
+  <img src="https://img.shields.io/badge/Node.js-Express-green?style=for-the-badge&logo=node.js" alt="Node.js" />
+  <img src="https://img.shields.io/badge/PostgreSQL-18-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Redis-Caching-red?style=for-the-badge&logo=redis" alt="Redis" />
+  <img src="https://img.shields.io/badge/Socket.io-WebSockets-white?style=for-the-badge&logo=socket.io" alt="Socket.io" />
+</div>
 
 ---
 
-## 🛠️ Tech Stack
+## 🌟 Key Features & Functionality
 
-### Frontend
-- **Framework:** Next.js 14 (App Router)
-- **Styling:** Tailwind CSS + shadcn/ui
-- **Icons:** Lucide React
+HackMate is designed to take the friction out of hackathon team formation. Here is what the platform offers:
 
-### Backend
-- **Runtime:** Node.js + Express
-- **Database:** PostgreSQL 18
-- **Caching & Rate Limiting:** Redis
-- **Real-time:** Socket.IO (WebSockets)
-- **Auth:** JWT (access + refresh tokens) + bcrypt
-- **Docs:** Swagger UI (OpenAPI 3.0)
+### 🧩 Smart Algorithmic Matching
+- **Data-Driven Suggestions:** Users are recommended teammates based on a weighted algorithm matching tech stacks (45%), availability slots (30%), and experience levels (15%).
+- **Skill Tracking:** Add programming languages, frameworks, and tools to your profile with a 1-5 proficiency rating.
+- **Match Requests:** Send, accept, or reject peer-to-peer team requests.
+
+### 🏆 Premium Hackathon Discovery
+- **Rich Hub UI:** View comprehensive hackathon details with an interactive, modern user interface.
+- **Dynamic Portals:** Explore tabs for Hackathon Overview, simulated Prize Pools, Event Rules, and Schedules.
+- **Real-time Status:** Automatically track Mode (Online/Hybrid), Dates, Tech Focus, and Team Size Requirements.
+
+### 💬 Real-Time Collaboration (Chat & Notifications)
+- **Instant Messaging:** WebSockets powered by `Socket.io` allow matches and formed teams to communicate instantly.
+- **Push Notifications:** In-app real-time notification alerts (via the notification bell) whenever you receive a match request, or when a request gets accepted.
+- **Persistent Chat History:** Seamlessly connects with PostgreSQL to durably store direct and team conversation history.
+
+### 👤 Advanced Profile Management
+- **Customizable Persona:** Maintain a rich profile containing your Avatar, Bio, GitHub/LinkedIn URLs, Timezone, and Location.
+- **Experience Level Matching:** Designate yourself as a *Beginner*, *Intermediate*, or *Advanced* developer to adjust your team-matching visibility.
+- **Aesthetic Public Profiles:** View a beautifully crafted glassmorphic profile page of potential teammates before sending requests.
+
+### 🛡️ Security & Performance
+- **JWT Auth & Validation:** Fully secured APIs via JSON Web Tokens handling both access and refresh tokens efficiently.
+- **Redis Caching:** High-performance caching layers implemented for APIs (like loading hackathon lists and matching pools) to prevent redundant database hits.
+
+---
+
+## 🛠️ Technology Stack
+
+HackMate is a decoupled Full-Stack Web Application relying on the following core modern web technologies:
+
+### 🎨 Frontend
+- **Framework:** [Next.js 16](https://nextjs.org/) (React 19)
+- **Routing:** App Router (`src/app`)
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+- **UI Components & Icons:** Custom Glassmorphic elements, `lucide-react` for iconography.
+- **State & Notifications:** `zustand` (State Management), `sonner` (Toast Notifications).
+
+### ⚙️ Backend
+- **Framework:** [Node.js](https://nodejs.org/) & Express 5
+- **Database:** [PostgreSQL](https://www.postgresql.org/) (via `pg`) — relational maps for users, skills, requests, and chats.
+- **Real-Time Engine:** [Socket.io](https://socket.io/) (WebSockets)
+- **Caching & Rate Limiting:** [Redis](https://redis.io/) (via `ioredis`) and `express-rate-limit`.
+- **Authentication:** `jsonwebtoken` (JWT) and `bcryptjs`.
+- **API Specs:** Swagger UI for visual API Documentation.
 
 ---
 
@@ -30,7 +70,7 @@ If you are cloning this repository to run it locally, follow these steps strictl
 ### 📋 Prerequisites
 
 Before you begin, ensure you have the following installed on your machine:
-- **Node.js**: v18 or completely updated (verify via `node -v`)
+- **Node.js**: v18+ (verify via `node -v`)
 - **PostgreSQL**: A cloud PostgreSQL database like [Neon DB](https://neon.tech/) (or a local instance).
 - **Redis**: Running locally (default port `6379`)
 - **Git**: For cloning the repository.
@@ -132,20 +172,20 @@ Open a **new terminal tab** and navigate back to the root of the project.
 
 ## 🧪 Testing the Application
 
-Because you ran the seed script (`seed.sql`), you can immediately log in as one of the pre-configured mock users.
+Because you ran the seed script (`seed.sql`), you can immediately log in as one of the pre-configured mock users. Check out the `SEED_DATA.md` file in the root directory for a full list of accounts, but here's a quick start:
 
-Check out the `SEED_DATA.md` file in the root directory for a full list of accounts, but here's a quick start:
-
-**Test User:**
-- Email: `arjun@hackmate.dev`
-- Password: `hackmate123`
+**Test User Accounts:**
+- **Arjun**: `arjun@hackmate.dev` | `hackmate123` *(Intermediate React/Node)*
+- **Priya**: `priya@hackmate.dev` | `hackmate123` *(Advanced Data/AI)*
+- **Sneha**: `sneha@hackmate.dev` | `hackmate123` *(Designer/Frontend)*
 
 ---
 
 ## 💡 Architecture Notes
 
 - **CORS & Proxying:** To prevent typical local development CORS issues, the Next.js `next.config.ts` automatically proxies all frontend API calls going to `/api/v1/*` directly into the backend on port 5000. 
-- **WebSocket Auth:** Ensure you check the browser's local storage for `access_token` since WebSockets initialize explicitly with this token.
-- **Algorithms:** Matches are automatically calculated via a dynamic weighted score formula measuring skill overlap (45%), availability (30%), and experience (15%).
+- **WebSocket Auth:** You must check the browser's local storage for `access_token` since WebSockets initialize explicitly with this token to join secure connection channels.
 
-Built with ❤️ for hackers who deserve better teammates.
+---
+
+<p align="center"><i>Built for hackers who deserve better teammates.</i></p>

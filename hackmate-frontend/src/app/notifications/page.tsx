@@ -24,7 +24,7 @@ export default function NotificationsPage() {
     setIsLoading(true);
     try {
       const response = await api.get("/notifications?limit=50");
-      setNotifications(response.data.notifications);
+      setNotifications(response.notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
       toast.error("Failed to load notifications.");

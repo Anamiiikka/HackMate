@@ -21,14 +21,31 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const socketRef = useRef<Socket | null>(null);
-  // A placeholder for the current user's ID. In a real app, you'd get this from your auth context.
-  const currentUserId = "current-user-id-placeholder"; 
+  const [userId, setUserId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   useEffect(() => {
+    // Get current user info from localStorage
+    const userStr = localStorage.getItem("user");
+    const token = localStorage.getItem("access_token");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserId(user.id);
+      } catch (e) {}
+    }
+
     const fetchMessages = async () => {
       try {
         const response = await api.get(`/conversations/${conversationId}/messages`);
-        setMessages(response.data.messages);
+        setMessages(response.messages);
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
@@ -36,13 +53,23 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
 
     fetchMessages();
 
-    // Initialize socket connection
-    socketRef.current = io("http://localhost:3001"); // Make sure this matches your backend socket server URL
+    // Initialize socket connection with auth token
+    // Using port 5000 directly for the socket connection
+    socketRef.current = io("http://localhost:5000", {
+      auth: { token }
+    });
 
-    socketRef.current.emit("joinConversation", conversationId);
+    socketRef.current.on('connect', () => {
+      console.log('📡 Connected to chat server');
+      socketRef.current?.emit("join_conversation", { conversation_id: conversationId });
+    });
 
-    socketRef.current.on("newMessage", (message: Message) => {
+    socketRef.current.on("new_message", (message: Message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    socketRef.current.on('error', (err: any) => {
+      console.error('❌ Socket error:', err.message);
     });
 
     return () => {
@@ -56,41 +83,66 @@ export function ChatWindow({ conversationId }: ChatWindowProps) {
     e.preventDefault();
     if (newMessage.trim() && socketRef.current) {
       const messageData = {
-        conversationId,
-        content: newMessage,
-        senderId: currentUserId, // This needs to be the actual user ID
+        conversation_id: conversationId,
+        content: newMessage.trim(),
       };
-      socketRef.current.emit("sendMessage", messageData);
+      socketRef.current.emit("send_message", messageData);
       setNewMessage("");
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow p-4 overflow-y-auto">
+    <div className="flex flex-col h-full bg-neutral-900 overflow-hidden relative">
+      {/* Messages List */}
+      <div 
+        ref={scrollRef}
+        className="flex-grow p-6 overflow-y-auto space-y-4 scroll-smooth"
+      >
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"} mb-4`}
+            className={`flex ${msg.sender_id === userId ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`p-3 rounded-lg ${
-                msg.sender_id === currentUserId ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"
+              className={`max-w-[70%] p-3 px-4 rounded-2xl relative group transition-all ${
+                msg.sender_id === userId 
+                ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-tr-none shadow-lg shadow-violet-900/10" 
+                : "bg-neutral-800 text-neutral-100 rounded-tl-none border border-white/5"
               }`}
             >
-              {msg.content}
+              <p className="text-[15px] leading-relaxed break-words">{msg.content}</p>
+              <span className={`text-[10px] opacity-40 block mt-1 ${msg.sender_id === userId ? "text-right" : "text-left"}`}>
+                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
           </div>
         ))}
+        {messages.length === 0 && (
+          <div className="h-full flex flex-col items-center justify-center opacity-20 pointer-events-none">
+            <div className="w-16 h-16 rounded-full bg-white/10 mb-4 flex items-center justify-center">
+              <span className="text-2xl">💬</span>
+            </div>
+            <p className="italic text-sm">No messages yet. Send a greeting!</p>
+          </div>
+        )}
       </div>
-      <div className="p-4 border-t">
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
+
+      {/* Input Area */}
+      <div className="p-4 bg-neutral-900/80 backdrop-blur-md border-t border-white/10">
+        <form onSubmit={handleSendMessage} className="flex space-x-3 items-center max-w-5xl mx-auto">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Type your message..."
+            className="flex-1 bg-black/40 border-white/10 rounded-2xl h-12 px-6 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all placeholder:text-neutral-600"
           />
-          <Button type="submit">Send</Button>
+          <Button 
+            type="submit"
+            className="bg-white text-black hover:bg-neutral-200 font-bold rounded-2xl h-12 px-8 transition-transform active:scale-95 shadow-xl shadow-white/5"
+            disabled={!newMessage.trim()}
+          >
+            Send
+          </Button>
         </form>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export interface RequestUser {
   id: string;
@@ -61,6 +62,11 @@ export function RequestCard({ request, type, onAccept, onReject, onCancel }: Req
         )}
         {type === 'outgoing' && request.status === 'pending' && onCancel && (
           <Button variant="destructive" onClick={() => onCancel(request.id)}>Cancel</Button>
+        )}
+        {request.status === 'accepted' && (
+          <Link href="/chat">
+            <Button>Chat</Button>
+          </Link>
         )}
       </CardFooter>
     </Card>

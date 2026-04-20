@@ -19,7 +19,7 @@ export default function HackathonDetailPage() {
       const fetchHackathon = async () => {
         try {
           const response = await api.get(`/hackathons/${id}`);
-          setHackathon(response.data.hackathon);
+          setHackathon(response.hackathon);
         } catch (error) {
           console.error("Error fetching hackathon:", error);
           toast.error("Failed to load hackathon details.");

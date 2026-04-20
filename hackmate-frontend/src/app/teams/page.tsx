@@ -14,7 +14,7 @@ export default function MyTeamsPage() {
     const fetchMyTeams = async () => {
       try {
         const response = await api.get("/teams");
-        setTeams(response.data.teams);
+        setTeams(response.teams);
       } catch (error) {
         console.error("Error fetching my teams:", error);
         toast.error("Failed to load your teams.");

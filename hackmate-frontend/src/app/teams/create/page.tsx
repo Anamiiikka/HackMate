@@ -20,7 +20,7 @@ export default function CreateTeamPage() {
     const fetchHackathons = async () => {
       try {
         const response = await api.get("/hackathons");
-        setAvailableHackathons(response.data.hackathons);
+        setAvailableHackathons(response.hackathons);
       } catch (error) {
         console.error("Error fetching hackathons:", error);
         toast.error("Could not load hackathons.");

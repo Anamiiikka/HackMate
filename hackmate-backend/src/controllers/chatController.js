@@ -11,42 +11,43 @@ const getConversations = async (req, res) => {
          c.type,
          c.team_id,
          c.created_at,
-         -- last message
-         json_build_object(
-           'id',         m.id,
-           'content',    m.content,
-           'sender_id',  m.sender_id,
-           'created_at', m.created_at
+         -- last message (subquery for precision)
+         (SELECT json_build_object(
+            'id',         m.id,
+            'content',    m.content,
+            'sender_id',  m.sender_id,
+            'created_at', m.created_at
+          )
+          FROM messages m
+          WHERE m.conversation_id = c.id
+          ORDER BY m.created_at DESC
+          LIMIT 1
          ) AS last_message,
          -- participants (excluding self)
-         COALESCE(
-           json_agg(
-             json_build_object(
-               'id',         u.id,
-               'name',       u.name,
-               'avatar_url', u.avatar_url
-             )
-           ) FILTER (WHERE u.id != $1),
-           '[]'
+         (SELECT COALESCE(json_agg(
+            json_build_object(
+              'id',         u.id,
+              'name',       u.name,
+              'avatar_url', u.avatar_url
+            )
+          ), '[]')
+          FROM conversation_participants cp_inner
+          JOIN users u ON u.id = cp_inner.user_id
+          WHERE cp_inner.conversation_id = c.id
+            AND u.id != $1
          ) AS participants,
-         -- unread count
-         COUNT(unread.id) AS unread_count
+         -- unread count (subquery to avoid join fan-out)
+         (SELECT COUNT(*)::int
+          FROM messages
+          WHERE conversation_id = c.id
+            AND sender_id != $1
+            AND read_at IS NULL
+         ) AS unread_count
        FROM conversations c
        JOIN conversation_participants cp ON cp.conversation_id = c.id AND cp.user_id = $1
-       JOIN conversation_participants cp2 ON cp2.conversation_id = c.id
-       JOIN users u ON u.id = cp2.user_id
-       LEFT JOIN LATERAL (
-         SELECT id, content, sender_id, created_at
-         FROM messages
-         WHERE conversation_id = c.id
-         ORDER BY created_at DESC
-         LIMIT 1
-       ) m ON TRUE
-       LEFT JOIN messages unread ON unread.conversation_id = c.id
-         AND unread.sender_id != $1
-         AND unread.read_at IS NULL
-       GROUP BY c.id, m.id, m.content, m.sender_id, m.created_at
-       ORDER BY COALESCE(m.created_at, c.created_at) DESC`,
+       ORDER BY
+         (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) DESC NULLS LAST,
+         c.created_at DESC`,
       [userId]
     );
 

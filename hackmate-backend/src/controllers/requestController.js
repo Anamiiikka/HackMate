@@ -280,6 +280,31 @@ const respondToRequest = async (req, res) => {
         }
       }
 
+      // ── Create/Join Team Conversation ────────────────
+      let conversationId;
+      const convCheck = await client.query(
+        'SELECT id FROM conversations WHERE team_id = $1',
+        [teamId]
+      );
+
+      if (convCheck.rows.length === 0) {
+        const convRes = await client.query(
+          "INSERT INTO conversations (type, team_id) VALUES ('team', $1) RETURNING id",
+          [teamId]
+        );
+        conversationId = convRes.rows[0].id;
+      } else {
+        conversationId = convCheck.rows[0].id;
+      }
+
+      // Add all team members as participants
+      await client.query(
+        `INSERT INTO conversation_participants (conversation_id, user_id)
+         SELECT $1, user_id FROM team_members WHERE team_id = $2
+         ON CONFLICT DO NOTHING`,
+        [conversationId, teamId]
+      );
+
       await client.query('COMMIT');
       return res.status(200).json({
         message: 'Request accepted — team formed!',
@@ -332,9 +357,23 @@ const sendConnectionRequest = async (req, res) => {
       return res.status(400).json({ error: 'You cannot send a request to yourself.' });
     }
 
-    // Check if a request already exists
+    // Check receiver exists and is active
+    const userCheck = await pool.query(
+      'SELECT id, name FROM users WHERE id = $1 AND is_active = TRUE',
+      [receiverId]
+    );
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Check if a pending/accepted request already exists between these two users
     const existingRequest = await pool.query(
-      `SELECT id FROM requests WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)`,
+      `SELECT id FROM match_requests
+       WHERE status IN ('pending','accepted')
+         AND (
+           (from_user_id = $1 AND to_user_id = $2) OR
+           (from_user_id = $2 AND to_user_id = $1)
+         )`,
       [senderId, receiverId]
     );
 
@@ -342,16 +381,46 @@ const sendConnectionRequest = async (req, res) => {
       return res.status(409).json({ error: 'A request has already been sent.' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO requests (sender_id, receiver_id, status) VALUES ($1, $2, 'pending') RETURNING *`,
+    // For a simple connection (no hackathon context), we need a hackathon_id.
+    // Find any hackathon both users have joined, otherwise use the first hackathon the receiver joined.
+    const hackathonCheck = await pool.query(
+      `SELECT uhp.hackathon_id
+       FROM user_hackathon_prefs uhp
+       WHERE uhp.user_id = $1
+         AND uhp.hackathon_id IN (
+           SELECT hackathon_id FROM user_hackathon_prefs WHERE user_id = $2
+         )
+       LIMIT 1`,
       [senderId, receiverId]
+    );
+
+    let hackathonId;
+    if (hackathonCheck.rows.length > 0) {
+      hackathonId = hackathonCheck.rows[0].hackathon_id;
+    } else {
+      // No shared hackathon - just pick any hackathon both may be in
+      const anyHackathon = await pool.query(
+        `SELECT hackathon_id FROM user_hackathon_prefs WHERE user_id = $1 LIMIT 1`,
+        [receiverId]
+      );
+      if (anyHackathon.rows.length === 0) {
+        return res.status(400).json({ error: 'This user has not joined any hackathon pool yet.' });
+      }
+      hackathonId = anyHackathon.rows[0].hackathon_id;
+    }
+
+    const result = await pool.query(
+      `INSERT INTO match_requests (from_user_id, to_user_id, hackathon_id)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [senderId, receiverId, hackathonId]
     );
 
     // Create notification for the receiver
     const { createNotification } = require('./notificationController');
     const sender = await pool.query('SELECT name FROM users WHERE id = $1', [senderId]);
     const senderName = sender.rows[0]?.name || 'Someone';
-    
+
     await createNotification(
       receiverId,
       'new_request',
@@ -364,6 +433,9 @@ const sendConnectionRequest = async (req, res) => {
       request: result.rows[0],
     });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'Request already exists.' });
+    }
     console.error('sendConnectionRequest error:', err.message);
     return res.status(500).json({ error: 'Internal server error' });
   }

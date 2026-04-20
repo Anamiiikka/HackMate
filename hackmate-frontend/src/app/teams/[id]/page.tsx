@@ -31,7 +31,7 @@ export default function TeamDetailPage() {
       const fetchTeamDetails = async () => {
         try {
           const response = await api.get(`/teams/${id}`);
-          setTeam(response.data.team);
+          setTeam(response.team);
         } catch (error) {
           console.error("Error fetching team details:", error);
           toast.error("Failed to load team details.");

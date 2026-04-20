@@ -16,8 +16,8 @@ export default function RequestsPage() {
         api.get("/requests/incoming"),
         api.get("/requests/outgoing"),
       ]);
-      setIncomingRequests(incomingRes.data.requests);
-      setOutgoingRequests(outgoingRes.data.requests);
+      setIncomingRequests(incomingRes.requests);
+      setOutgoingRequests(outgoingRes.requests);
     } catch (error) {
       console.error("Error fetching requests:", error);
       toast.error("Failed to load requests.");

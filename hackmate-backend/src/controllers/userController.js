@@ -227,20 +227,20 @@ const getPotentialMatches = async (req, res) => {
 
     // Find users that the current user has already interacted with
     const sentRequests = await pool.query(
-      `SELECT receiver_id FROM requests WHERE sender_id = $1`,
+      `SELECT to_user_id FROM match_requests WHERE from_user_id = $1`,
       [id]
     );
     const receivedRequests = await pool.query(
-      `SELECT sender_id FROM requests WHERE receiver_id = $1`,
+      `SELECT from_user_id FROM match_requests WHERE to_user_id = $1`,
       [id]
     );
 
-    const sentIds = sentRequests.rows.map(r => r.receiver_id);
-    const receivedIds = receivedRequests.rows.map(r => r.sender_id);
+    const sentIds = sentRequests.rows.map(r => r.to_user_id);
+    const receivedIds = receivedRequests.rows.map(r => r.from_user_id);
     const excludedIds = [...new Set([...sentIds, ...receivedIds, id])]; // Exclude self and interacted users
 
     let usersQuery = `
-      SELECT u.id, u.name, u.username, u.email, u.bio, u.avatar_url
+      SELECT u.id, u.name, u.email, u.bio, u.avatar_url, u.experience_level
       FROM users u
     `;
     const queryParams = [excludedIds];
@@ -279,7 +279,7 @@ const getPotentialMatches = async (req, res) => {
       };
     }));
 
-    return res.status(200).json(usersWithSkills);
+    return res.status(200).json({ data: usersWithSkills });
 
   } catch (err) {
     console.error('getPotentialMatches error:', err.message);

@@ -22,14 +22,23 @@ export function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      if (!token) {
+        // User not authenticated, skip fetching
+        return;
+      }
+      
       const [notifRes, countRes] = await Promise.all([
         api.get("/notifications?limit=5"),
         api.get("/notifications/count/unread"),
       ]);
-      setNotifications(notifRes.data.notifications);
-      setUnreadCount(countRes.data.unread_count);
+      setNotifications(notifRes.notifications || []);
+      setUnreadCount(countRes.unread_count || 0);
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      // Silent fail - token might be expired
+      console.debug("Error fetching notifications:", error);
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 

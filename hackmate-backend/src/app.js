@@ -21,13 +21,20 @@ const server = http.createServer(app);         // raw http server
 const io     = new Server(server, {
   cors: {
     origin:  process.env.CLIENT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']
   }
 });
 
 // ── Middleware ────────────────────────────────────────
-app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+// CORS must be before helmet so OPTIONS preflight responses aren't blocked
+const corsOptions = {
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+app.use(cors(corsOptions));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.path}`);
   next();
@@ -65,7 +72,7 @@ setupSocket(io);
 app.use((req, res) => res.status(404).json({ error: 'Route not found' }));
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Global error: ' + err.message + '\n' + err.stack });
 });
 
 // ── Start server (use server.listen not app.listen) ───

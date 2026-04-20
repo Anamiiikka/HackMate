@@ -22,18 +22,22 @@ const getNotifications = async (req, res) => {
     const { id: userId } = req.user;
     const { limit = 20, offset = 0 } = req.query;
 
+    if (!userId) {
+       return res.status(400).json({ error: 'User ID is missing from token' });
+    }
+
     const result = await pool.query(
       `SELECT * FROM notifications
        WHERE user_id = $1
        ORDER BY created_at DESC
        LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
+      [userId, parseInt(limit) || 20, parseInt(offset) || 0]
     );
 
     return res.status(200).json({ notifications: result.rows });
   } catch (err) {
     console.error('getNotifications error:', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'getNotifications error: ' + err.message });
   }
 };
 
@@ -51,7 +55,7 @@ const getUnreadCount = async (req, res) => {
     return res.status(200).json({ unread_count: parseInt(result.rows[0].unread_count) });
   } catch (err) {
     console.error('getUnreadCount error:', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'getUnreadCount error: ' + err.message });
   }
 };
 
@@ -76,7 +80,7 @@ const markAsRead = async (req, res) => {
     return res.status(200).json({ notification: result.rows[0] });
   } catch (err) {
     console.error('markAsRead error:', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'markAsRead error: ' + err.message });
   }
 };
 
@@ -95,7 +99,7 @@ const markAllAsRead = async (req, res) => {
     return res.status(200).json({ updated: result.rowCount });
   } catch (err) {
     console.error('markAllAsRead error:', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'markAllAsRead error: ' + err.message });
   }
 };
 

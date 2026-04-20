@@ -24,7 +24,7 @@ export default function HackathonsPage() {
       if (filters.tech_focus) params.append("tech_focus", filters.tech_focus);
 
       const response = await api.get(`/hackathons?${params.toString()}`);
-      setHackathons(response.data.hackathons);
+      setHackathons(response.hackathons);
     } catch (error) {
       console.error("Error fetching hackathons:", error);
       toast.error("Failed to load hackathons.");

@@ -1,4 +1,4 @@
-export const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+export const BASE_URL = '/api/v1';
 
 interface FetchOptions extends RequestInit {
   requireAuth?: boolean;
@@ -18,6 +18,8 @@ export const apiFetch = async (endpoint: string, options: FetchOptions = {}) => 
       const token = localStorage.getItem('access_token');
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
+      } else {
+        throw new Error('Authentication required. Please log in again.');
       }
     }
   }
@@ -40,8 +42,15 @@ export const apiFetch = async (endpoint: string, options: FetchOptions = {}) => 
           window.dispatchEvent(new Event('auth-change'));
         }
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Request failed with status ${response.status}`);
+      const rawText = await response.text().catch(() => "");
+      let errorData: any = {};
+      try {
+        errorData = JSON.parse(rawText);
+      } catch (e) {
+        // Not JSON
+        console.error("Non-JSON API error response:", rawText);
+      }
+      throw new Error(errorData.error || `Request failed with status ${response.status}. Raw: ${rawText.substring(0, 50)}`);
     }
 
     return response.json();

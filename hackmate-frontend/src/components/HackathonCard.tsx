@@ -13,6 +13,10 @@ export interface Hackathon {
   end_date: string;
   location: string;
   mode: 'online' | 'offline' | 'hybrid';
+  max_team_size?: number;
+  min_team_size?: number;
+  tech_focus?: string[];
+  website_url?: string;
 }
 
 interface HackathonCardProps {

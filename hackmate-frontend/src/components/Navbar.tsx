@@ -51,8 +51,11 @@ export default function Navbar() {
           </Link>
           {isAuthenticated ? (
             <>
-              <Link href="/dashboard" className={`text-sm tracking-wide transition-colors ${pathname.includes("/dashboard") ? "text-white" : "text-neutral-400 hover:text-white"}`}>
+              <Link href="/dashboard" className={`text-sm tracking-wide transition-colors ${pathname === "/dashboard" ? "text-white" : "text-neutral-400 hover:text-white"}`}>
                 Dashboard
+              </Link>
+              <Link href="/dashboard/profile" className={`text-sm tracking-wide transition-colors ${pathname.includes("/dashboard/profile") ? "text-white" : "text-neutral-400 hover:text-white"}`}>
+                Profile
               </Link>
               <Link href="/teams" className={`text-sm tracking-wide transition-colors ${pathname.includes("/teams") ? "text-white" : "text-neutral-400 hover:text-white"}`}>
                 Teams

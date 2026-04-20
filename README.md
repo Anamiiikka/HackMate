@@ -1,300 +1,151 @@
-# HackMate Backend 🚀
+# HackMate 🚀
 
 > Smart hackathon teammate matching platform — find teammates by tech stack, availability, and experience level with real-time chat.
 
----
-
-## Tech Stack
-
-* **Runtime:** Node.js + Express
-* **Database:** PostgreSQL 18
-* **Real-time:** Socket.IO (WebSockets)
-* **Auth:** JWT (access + refresh tokens) + bcrypt
-* **Docs:** Swagger UI (OpenAPI 3.0)
+HackMate consists of a **Next.js frontend** and an **Express.js backend** connected via a Next.js proxy.
 
 ---
 
-## Features
+## 🛠️ Tech Stack
 
-* 🔐 JWT authentication with refresh token rotation
-* 👤 User profiles with tech stack and availability
-* 🧠 Smart matching algorithm (skill overlap, availability, experience)
-* 🤝 Match requests with auto team formation
-* 💬 Real-time chat with typing indicators and read receipts
-* 🛡️ ACID-safe transactions, rate limiting, input validation
+### Frontend
+- **Framework:** Next.js 14 (App Router)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Icons:** Lucide React
 
----
-
-## Project Structure
-
-```
-hackmate-backend/
-├── src/
-│   ├── config/
-│   │   └── db.js
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── userController.js
-│   │   ├── hackathonController.js
-│   │   ├── matchingController.js
-│   │   ├── requestController.js
-│   │   └── chatController.js
-│   ├── middleware/
-│   │   └── auth.js
-│   ├── migrations/
-│   │   └── 001_initial_schema.sql
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── users.js
-│   │   ├── hackathons.js
-│   │   ├── matching.js
-│   │   ├── requests.js
-│   │   └── conversations.js
-│   ├── seeds/
-│   │   └── seed.sql
-│   ├── services/
-│   │   └── matchingService.js
-│   ├── socket/
-│   │   └── chatSocket.js
-│   ├── docs/
-│   │   └── openapi.yaml
-│   └── app.js
-├── .env
-├── .gitignore
-└── package.json
-```
+### Backend
+- **Runtime:** Node.js + Express
+- **Database:** PostgreSQL 18
+- **Caching & Rate Limiting:** Redis
+- **Real-time:** Socket.IO (WebSockets)
+- **Auth:** JWT (access + refresh tokens) + bcrypt
+- **Docs:** Swagger UI (OpenAPI 3.0)
 
 ---
 
-## Getting Started
+## 🚀 Local Setup Guide
 
-### Prerequisites
+If you are cloning this repository to run it locally, follow these steps strictly in order.
 
-* Node.js v18+
-* PostgreSQL 18 (running on port 5433)
-* pgAdmin (optional)
+### 📋 Prerequisites
+
+Before you begin, ensure you have the following installed on your machine:
+- **Node.js**: v18 or completely updated (verify via `node -v`)
+- **PostgreSQL**: A cloud PostgreSQL database like [Neon DB](https://neon.tech/) (or a local instance).
+- **Redis**: Running locally (default port `6379`)
+- **Git**: For cloning the repository.
 
 ---
 
-### 1. Clone and install
+### Step 1: Clone the Repository
 
 ```bash
 git clone <your-repo-url>
-cd hackmate-backend
-npm install
+cd HackMate
 ```
 
 ---
 
-### 2. Configure environment
+### Step 2: Database Setup 
 
-Create `.env` file:
+HackMate uses a single Postgres connection string. If you're using Neon DB, grab your `DATABASE_URL` from the Neon dashboard.
 
-```
-PORT=5000
-DB_HOST=localhost
-DB_PORT=5433
-DB_USER=postgres
-DB_PASSWORD=yourpassword
-DB_NAME=hackmate
-JWT_SECRET=generate_with_crypto_randomBytes_64
-JWT_REFRESH_SECRET=generate_with_crypto_randomBytes_64_different
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-NODE_ENV=development
-```
-
-Generate secrets:
+You must run the migration and seed files against your database. You can do this by passing your `DATABASE_URL` directly into `psql`:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# 1. Base Schema
+psql "<YOUR_DATABASE_URL>" -f hackmate-backend/src/migrations/001_initial_schema.sql
+
+# 2. Seed Users & Data
+psql "<YOUR_DATABASE_URL>" -f hackmate-backend/src/seeds/seed.sql
+
+# 3. Notification Tables
+psql "<YOUR_DATABASE_URL>" -f hackmate-backend/src/migrations/002_create_notifications_table.sql
+
+# 4. Chat & Messaging Tables
+psql "<YOUR_DATABASE_URL>" -f hackmate-backend/src/migrations/003_create_chat_tables.sql
 ```
 
----
+*(Note: If your URL doesn't work out of the box, make sure it ends with `?sslmode=require` or `?sslmode=verify-full`).*
 
-### 3. Setup database
-
-```bash
-psql -U postgres -p 5433 -c "CREATE DATABASE hackmate;"
-
-psql -U postgres -p 5433 -d hackmate -f src/migrations/001_initial_schema.sql
-
-psql -U postgres -p 5433 -d hackmate -f src/seeds/seed.sql
-```
+Make sure **Redis** is running in the background. If you're on Mac: `brew services start redis`, or if on Windows using WSL: `sudo service redis-server start`.
 
 ---
 
-### 4. Start server
+### Step 3: Start the Backend
 
-```bash
-npm run dev
-npm start
-```
-
-Server: http://localhost:5000
-
----
-
-## API Documentation
-
-http://localhost:5000/api-docs
-
----
-
-## Endpoints Overview
-
-### Auth
-
-| Method | Endpoint              | Description   |
-| ------ | --------------------- | ------------- |
-| POST   | /api/v1/auth/register | Register      |
-| POST   | /api/v1/auth/login    | Login         |
-| POST   | /api/v1/auth/refresh  | Refresh token |
-| POST   | /api/v1/auth/logout   | Logout        |
-
----
-
-### Profile
-
-| Method | Endpoint                          | Description         |
-| ------ | --------------------------------- | ------------------- |
-| GET    | /api/v1/users/me                  | Get profile         |
-| PUT    | /api/v1/users/me                  | Update profile      |
-| PUT    | /api/v1/users/me/skills           | Set skills          |
-| POST   | /api/v1/users/me/availability     | Add availability    |
-| DELETE | /api/v1/users/me/availability/:id | Remove availability |
-| GET    | /api/v1/users/:id                 | Public profile      |
+1. Navigate to the backend directory:
+   ```bash
+   cd hackmate-backend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file in the `hackmate-backend` directory (`hackmate-backend/.env`):
+   ```env
+   PORT=5000
+   DATABASE_URL=postgresql://user:password@endpoint.neon.tech/neondb?sslmode=verify-full
+   JWT_SECRET=super_secret_jwt_key_here
+   JWT_REFRESH_SECRET=another_super_secret_refresh_key
+   JWT_EXPIRES_IN=1h
+   JWT_REFRESH_EXPIRES_IN=7d
+   CLIENT_URL=http://localhost:3000
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
+   REDIS_PASSWORD=
+   ```
+4. Start the backend server:
+   ```bash
+   npm run dev
+   ```
+   *The backend should output that it is connected to the DB and running on port 5000.*
 
 ---
 
-### Hackathons
+### Step 4: Start the Frontend
 
-| Method | Endpoint                    | Description |
-| ------ | --------------------------- | ----------- |
-| GET    | /api/v1/hackathons          | List        |
-| GET    | /api/v1/hackathons/skills   | Skills      |
-| POST   | /api/v1/hackathons/:id/join | Join        |
+Open a **new terminal tab** and navigate back to the root of the project.
 
----
-
-### Matching
-
-| Method | Endpoint                               |
-| ------ | -------------------------------------- |
-| GET    | /api/v1/hackathons/:id/recommendations |
-
----
-
-### Requests
-
-| Method | Endpoint                  |
-| ------ | ------------------------- |
-| POST   | /api/v1/requests          |
-| GET    | /api/v1/requests/incoming |
-| GET    | /api/v1/requests/outgoing |
-| PATCH  | /api/v1/requests/:id      |
-| DELETE | /api/v1/requests/:id      |
+1. Navigate to the frontend directory:
+   ```bash
+   cd hackmate-frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. *(Optional) The frontend uses Next.js rewrites to map `/api/v1/*` to `localhost:5000`, so a `.env` file isn't strictly required to get the app running.*
+4. Start the frontend server:
+   ```bash
+   npm run dev
+   ```
 
 ---
 
-### Chat (HTTP)
+### 🌐 Accessing the App
 
-| Method | Endpoint                           |
-| ------ | ---------------------------------- |
-| GET    | /api/v1/conversations              |
-| POST   | /api/v1/conversations              |
-| GET    | /api/v1/conversations/:id/messages |
+- **Web App**: Navigate your browser to `http://localhost:3000`
+- **Backend API Docs**: View the Swagger definitions at `http://localhost:5000/api-docs`
 
 ---
 
-## WebSocket Usage
+## 🧪 Testing the Application
 
-```js
-const socket = io('http://localhost:5000', {
-  auth: { token: '<access_token>' }
-});
-```
+Because you ran the seed script (`seed.sql`), you can immediately log in as one of the pre-configured mock users.
 
----
+Check out the `SEED_DATA.md` file in the root directory for a full list of accounts, but here's a quick start:
 
-## Database Schema
-
-* users
-* refresh_tokens
-* skills
-* user_skills
-* hackathons
-* user_hackathon_prefs
-* availability_slots
-* teams
-* team_members
-* match_requests
-* conversations
-* conversation_participants
-* messages
+**Test User:**
+- Email: `arjun@hackmate.dev`
+- Password: `hackmate123`
 
 ---
 
-## Matching Algorithm
+## 💡 Architecture Notes
 
-```
-Score (0-100) =
-  skill_overlap  × 0.45
-  availability   × 0.30
-  experience     × 0.15
-  seriousness    × 0.10
-```
-
----
-
-## Security
-
-* bcrypt hashing
-* JWT auth
-* Helmet.js
-* Rate limiting (200 req / 15 min)
-* Input validation
-* Row-level locking
-
----
-
-## Health Check
-
-```
-GET /health
-→ { "status": "ok" }
-```
-
----
-
-## Seeded Data
-
-### Skills (28)
-
-React, Vue, Next.js, Angular, Node.js, Express, Django, FastAPI, Spring Boot, PostgreSQL, MongoDB, Redis, MySQL, Docker, Kubernetes, AWS, GCP, TensorFlow, PyTorch, LangChain, Figma, Flutter, React Native, Solidity, Rust, Go, GraphQL, TypeScript
-
-### Hackathons
-
-* HackIndia 2026
-* Smart India Hackathon 2026
-* ETHIndia 2026
-
----
-
-## Roadmap
-
-* Phase 1 — Schema + API
-* Phase 2 — Auth
-* Phase 3 — Profile
-* Phase 4 — Matching
-* Phase 5 — Requests
-* Phase 6 — Chat
-* Phase 7 — Redis
-* Phase 8 — Load Testing
-* Phase 9 — Frontend
-
----
-
-## Author
+- **CORS & Proxying:** To prevent typical local development CORS issues, the Next.js `next.config.ts` automatically proxies all frontend API calls going to `/api/v1/*` directly into the backend on port 5000. 
+- **WebSocket Auth:** Ensure you check the browser's local storage for `access_token` since WebSockets initialize explicitly with this token.
+- **Algorithms:** Matches are automatically calculated via a dynamic weighted score formula measuring skill overlap (45%), availability (30%), and experience (15%).
 
 Built with ❤️ for hackers who deserve better teammates.

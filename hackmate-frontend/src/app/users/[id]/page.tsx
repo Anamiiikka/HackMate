@@ -33,8 +33,17 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        setCurrentUserId(u.id);
+      } catch (e) {}
+    }
+
     const fetchProfile = async () => {
       try {
         const data = await apiFetch(`/users/${id}`, { requireAuth: true });
@@ -161,10 +170,16 @@ export default function UserProfilePage() {
         </div>
 
         {/* Action Button */}
-        <div className="mt-10 flex justify-end">
-          <button className="bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 px-8 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)]">
-            Send Team Request
-          </button>
+        <div className="mt-10 flex justify-end gap-4">
+          {currentUserId === profile.id ? (
+            <Link href="/dashboard/profile" className="bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 px-8 rounded-xl transition-all border border-white/10">
+              Edit Profile
+            </Link>
+          ) : (
+            <button className="bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 px-8 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)]">
+              Send Team Request
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,8 @@ const { body, param, validationResult } = require('express-validator');
 const {
   getConversations,
   getMessages,
-  createConversation
+  createConversation,
+  markConversationRead,
 } = require('../controllers/chatController');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -30,5 +31,11 @@ router.get('/:id/messages', authenticateToken, [
   param('id').isUUID().withMessage('Valid conversation UUID required'),
   validate
 ], getMessages);
+
+// POST /api/v1/conversations/:id/read
+router.post('/:id/read', authenticateToken, [
+  param('id').isUUID().withMessage('Valid conversation UUID required'),
+  validate
+], markConversationRead);
 
 module.exports = router;

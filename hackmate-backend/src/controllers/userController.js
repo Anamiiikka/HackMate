@@ -239,12 +239,29 @@ const getPotentialMatches = async (req, res) => {
     const receivedIds = receivedRequests.rows.map(r => r.from_user_id);
     const excludedIds = [...new Set([...sentIds, ...receivedIds, id])]; // Exclude self and interacted users
 
+    // Only surface users who share at least one hackathon with the requester.
+    // This keeps match-accept from hitting "user has not joined any hackathon pool yet".
+    const myHackathons = await pool.query(
+      `SELECT hackathon_id FROM user_hackathon_prefs WHERE user_id = $1`,
+      [id]
+    );
+    const myHackathonIds = myHackathons.rows.map(r => r.hackathon_id);
+
+    if (myHackathonIds.length === 0) {
+      return res.status(200).json({
+        data: [],
+        message:
+          'Join at least one hackathon to see potential teammates.',
+      });
+    }
+
     let usersQuery = `
-      SELECT u.id, u.name, u.email, u.bio, u.avatar_url, u.experience_level
+      SELECT DISTINCT u.id, u.name, u.email, u.bio, u.avatar_url, u.experience_level
       FROM users u
+      JOIN user_hackathon_prefs uhp ON uhp.user_id = u.id AND uhp.hackathon_id = ANY($2)
     `;
-    const queryParams = [excludedIds];
-    let paramIndex = 2;
+    const queryParams = [excludedIds, myHackathonIds];
+    let paramIndex = 3;
 
     if (skills) {
       const skillList = skills.split(',').map(s => s.trim().toLowerCase());

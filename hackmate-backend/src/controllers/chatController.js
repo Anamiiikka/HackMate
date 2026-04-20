@@ -11,19 +11,24 @@ const getConversations = async (req, res) => {
          c.type,
          c.team_id,
          c.created_at,
-         -- last message (subquery for precision)
          (SELECT json_build_object(
-            'id',         m.id,
-            'content',    m.content,
-            'sender_id',  m.sender_id,
-            'created_at', m.created_at
+            'id',              m.id,
+            'content',         m.content,
+            'conversation_id', m.conversation_id,
+            'created_at',      m.created_at,
+            'read_at',         m.read_at,
+            'sender', json_build_object(
+              'id',         su.id,
+              'name',       su.name,
+              'avatar_url', su.avatar_url
+            )
           )
           FROM messages m
+          JOIN users su ON su.id = m.sender_id
           WHERE m.conversation_id = c.id
           ORDER BY m.created_at DESC
           LIMIT 1
          ) AS last_message,
-         -- participants (excluding self)
          (SELECT COALESCE(json_agg(
             json_build_object(
               'id',         u.id,
@@ -36,7 +41,6 @@ const getConversations = async (req, res) => {
           WHERE cp_inner.conversation_id = c.id
             AND u.id != $1
          ) AS participants,
-         -- unread count (subquery to avoid join fan-out)
          (SELECT COUNT(*)::int
           FROM messages
           WHERE conversation_id = c.id
@@ -67,7 +71,6 @@ const getMessages = async (req, res) => {
     const limit          = Math.min(parseInt(req.query.limit) || 50, 100);
     const before         = req.query.before; // ISO timestamp cursor
 
-    // verify user is a participant
     const access = await pool.query(
       `SELECT 1 FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
@@ -78,7 +81,12 @@ const getMessages = async (req, res) => {
 
     let query = `
       SELECT
-        m.id, m.content, m.created_at, m.read_at,
+        m.id,
+        m.conversation_id,
+        m.sender_id,
+        m.content,
+        m.created_at,
+        m.read_at,
         json_build_object(
           'id',         u.id,
           'name',       u.name,
@@ -100,18 +108,12 @@ const getMessages = async (req, res) => {
 
     const result = await pool.query(query, params);
 
-    // mark fetched messages as read
-    await pool.query(
-      `UPDATE messages SET read_at = NOW()
-       WHERE conversation_id = $1
-         AND sender_id != $2
-         AND read_at IS NULL`,
-      [conversationId, userId]
-    );
+    // Strip the flat sender_id from the response; clients use msg.sender.id.
+    const messages = result.rows.reverse().map(({ sender_id, ...rest }) => rest);
 
-    return res.status(200).json({
-      messages: result.rows.reverse() // oldest first
-    });
+    const hasMore = result.rows.length === limit;
+
+    return res.status(200).json({ messages, has_more: hasMore });
 
   } catch (err) {
     console.error('getMessages error:', err.message);
@@ -119,7 +121,7 @@ const getMessages = async (req, res) => {
   }
 };
 
-// ── POST /conversations — create direct conversation ──
+// ── POST /conversations — create/return direct conversation ──
 const createConversation = async (req, res) => {
   const userId              = req.user.id;
   const { participant_id }  = req.body;
@@ -131,7 +133,6 @@ const createConversation = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // check if direct conversation already exists between these two
     const existing = await client.query(
       `SELECT c.id FROM conversations c
        JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
@@ -144,17 +145,15 @@ const createConversation = async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(200).json({
         message: 'Conversation already exists',
-        conversation_id: existing.rows[0].id
+        conversation_id: existing.rows[0].id,
       });
     }
 
-    // create conversation
     const convResult = await client.query(
       `INSERT INTO conversations (type) VALUES ('direct') RETURNING id`
     );
     const conversationId = convResult.rows[0].id;
 
-    // add both participants
     await client.query(
       `INSERT INTO conversation_participants (conversation_id, user_id)
        VALUES ($1, $2), ($1, $3)`,
@@ -164,7 +163,7 @@ const createConversation = async (req, res) => {
     await client.query('COMMIT');
     return res.status(201).json({
       message: 'Conversation created',
-      conversation_id: conversationId
+      conversation_id: conversationId,
     });
 
   } catch (err) {
@@ -176,4 +175,38 @@ const createConversation = async (req, res) => {
   }
 };
 
-module.exports = { getConversations, getMessages, createConversation };
+// ── POST /conversations/:id/read — mark all as read (REST fallback) ─
+const markConversationRead = async (req, res) => {
+  try {
+    const userId         = req.user.id;
+    const conversationId = req.params.id;
+
+    const access = await pool.query(
+      `SELECT 1 FROM conversation_participants
+       WHERE conversation_id = $1 AND user_id = $2`,
+      [conversationId, userId]
+    );
+    if (access.rows.length === 0)
+      return res.status(403).json({ error: 'Not a participant in this conversation' });
+
+    await pool.query(
+      `UPDATE messages SET read_at = NOW()
+       WHERE conversation_id = $1
+         AND sender_id != $2
+         AND read_at IS NULL`,
+      [conversationId, userId]
+    );
+
+    return res.status(200).json({ message: 'Marked as read' });
+  } catch (err) {
+    console.error('markConversationRead error:', err.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+module.exports = {
+  getConversations,
+  getMessages,
+  createConversation,
+  markConversationRead,
+};

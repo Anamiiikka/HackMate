@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(node -e \"require\\('./src/controllers/chatController'\\); require\\('./src/socket/chatSocket'\\); require\\('./src/routes/conversations'\\); console.log\\('OK'\\)\")",
+      "Bash(node -e \"require\\('./src/controllers/userController'\\); console.log\\('OK'\\)\")",
+      "Bash(timeout 60 npx next build)",
+      "Bash(timeout 120 npx next build)"
+    ]
+  }
+}

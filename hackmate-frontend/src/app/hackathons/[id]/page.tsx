@@ -4,9 +4,22 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { Hackathon } from "@/components/HackathonCard";
-import { Toaster, toast } from "sonner";
-import { Calendar, MapPin, Users, Globe, Trophy, Info, FileText, CheckCircle, ExternalLink, ChevronLeft } from "lucide-react";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle,
+  ExternalLink,
+  FileText,
+  Globe,
+  Info,
+  MapPin,
+  Trophy,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
+import { Container, SectionLabel } from "@/components/ui/container";
+import { GridPattern } from "@/components/ui/grid-pattern";
 
 export default function HackathonDetailPage() {
   const params = useParams();
@@ -14,142 +27,162 @@ export default function HackathonDetailPage() {
   const { id } = params;
   const [hackathon, setHackathon] = useState<Hackathon | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "prizes" | "rules" | "schedule">("overview");
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const fetchHackathon = async () => {
-        try {
-          const response = await apiFetch(`/hackathons/${id}`);
-          setHackathon(response.hackathon);
-        } catch (error) {
-          console.error("Error fetching hackathon:", error);
-          toast.error("Failed to load hackathon details.");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchHackathon();
-    }
+    if (!id) return;
+    (async () => {
+      try {
+        const response = await apiFetch(`/hackathons/${id}`);
+        setHackathon(response.hackathon);
+      } catch (error) {
+        console.error("Error fetching hackathon:", error);
+        toast.error("Failed to load hackathon details.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [id]);
 
   const handleJoin = async () => {
+    setJoining(true);
     try {
       await apiFetch(`/hackathons/${id}/join`, {
         method: "POST",
         requireAuth: true,
-        body: JSON.stringify({ seriousness_level: "serious" })
+        body: JSON.stringify({ seriousness_level: "serious" }),
       });
-      toast.success("Successfully joined the hackathon pool!");
+      toast.success("You're in. Head to your dashboard to start matching.");
     } catch (error: any) {
-      console.error("Error joining hackathon:", error);
       toast.error(error.message || "Failed to join hackathon.");
+    } finally {
+      setJoining(false);
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen pt-24 text-center text-neutral-400">Loading hackathon...</div>;
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-muted-foreground">
+        Loading hackathon…
+      </div>
+    );
   }
 
   if (!hackathon) {
-    return <div className="min-h-screen pt-24 text-center text-red-400">Hackathon not found.</div>;
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-muted-foreground">
+        Hackathon not found.
+      </div>
+    );
   }
 
-  const isOnline = hackathon.mode === "online";
+  const start = new Date(hackathon.start_date);
+  const end = new Date(hackathon.end_date);
+
   const tabs = [
     { id: "overview", label: "Overview", icon: Info },
     { id: "prizes", label: "Prizes", icon: Trophy },
     { id: "rules", label: "Rules", icon: FileText },
     { id: "schedule", label: "Schedule", icon: Calendar },
-  ];
+  ] as const;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20">
-      <Toaster theme="dark" />
-      
-      {/* Hero Header */}
-      <div className="relative pt-24 pb-12 w-full overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-900/40 via-indigo-900/20 to-black pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black to-transparent pointer-events-none" />
-        
-        <div className="container mx-auto px-6 relative z-10">
-          <button 
+    <div className="relative min-h-[calc(100vh-4rem)] pb-24">
+      <GridPattern variant="dots" fade="radial" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_at_top,oklch(0.78_0.18_40/0.16),transparent_60%)]" />
+
+      {/* Hero */}
+      <section className="relative pt-14 pb-10">
+        <Container className="relative">
+          <button
             onClick={() => router.back()}
-            className="text-neutral-400 hover:text-white mb-6 flex items-center gap-2 transition-colors cursor-pointer"
+            className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ChevronLeft size={20} /> Back
+            <ArrowLeft size={14} /> Back
           </button>
 
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="max-w-3xl">
-              <div className="flex gap-3 items-center mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider
-                  ${isOnline ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                             : 'bg-violet-500/20 text-violet-400 border border-violet-500/30'}`}
-                >
-                  {hackathon.mode}
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-neutral-300">
-                  Featured
-                </span>
-              </div>
-              <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 mb-4">
-                {hackathon.name}
-              </h1>
-              <p className="text-lg md:text-xl text-neutral-400 max-w-2xl leading-relaxed">
-                {hackathon.description.split('.')[0]}. Join the ultimate challenge to push the boundaries of technology.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+          <SectionLabel>Hackathon</SectionLabel>
+          <h1 className="mt-3 max-w-3xl font-display text-4xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-6xl">
+            {hackathon.name}
+          </h1>
+          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground text-pretty">
+            {hackathon.description.split(".")[0]}.
+          </p>
 
-      <div className="container mx-auto px-6 mt-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          
-          {/* Main Content Area */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-0.5 text-[11px] font-medium capitalize text-foreground">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{
+                  backgroundColor:
+                    hackathon.mode === "online"
+                      ? "color-mix(in oklch, var(--mint) 80%, transparent)"
+                      : hackathon.mode === "offline"
+                      ? "color-mix(in oklch, var(--ember) 80%, transparent)"
+                      : "oklch(0.78 0.14 80)",
+                }}
+              />
+              {hackathon.mode}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-0.5 text-[11px] text-muted-foreground">
+              <Calendar size={11} />
+              {start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              <span className="mx-0.5">→</span>
+              {end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-0.5 text-[11px] text-muted-foreground">
+              <MapPin size={11} />
+              {hackathon.location}
+            </span>
+          </div>
+        </Container>
+      </section>
+
+      <Container className="relative">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Main */}
           <div className="lg:col-span-2">
-            
-            {/* Tabs */}
-            <div className="flex overflow-x-auto border-b border-white/10 mb-8 scrollbar-hide">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
+            <div className="flex gap-1 overflow-x-auto rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
+              {tabs.map((t) => {
+                const Icon = t.icon;
+                const active = activeTab === t.id;
                 return (
                   <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all border-b-2 whitespace-nowrap
-                      ${isActive 
-                        ? 'border-violet-500 text-white bg-violet-500/5' 
-                        : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-white/5'}`}
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id)}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-medium transition-colors ${
+                      active
+                        ? "bg-white/[0.08] text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <Icon size={18} />
-                    {tab.label}
+                    <Icon size={13} />
+                    {t.label}
                   </button>
                 );
               })}
             </div>
 
-            {/* Tab Contents */}
-            <div className="bg-neutral-900/30 border border-white/5 rounded-2xl p-6 md:p-8 backdrop-blur-sm min-h-[400px]">
+            <div className="mt-6 min-h-[360px] rounded-3xl border border-white/[0.06] bg-card/60 p-7 shadow-soft backdrop-blur-sm">
               {activeTab === "overview" && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-8 animate-fade-up">
                   <section>
-                    <h3 className="text-xl font-semibold mb-4 text-white">About the Hackathon</h3>
-                    <p className="text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                    <h3 className="font-display text-lg font-semibold tracking-tight">About</h3>
+                    <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-muted-foreground text-pretty">
                       {hackathon.description}
                     </p>
                   </section>
-
                   {hackathon.tech_focus && hackathon.tech_focus.length > 0 && (
                     <section>
-                      <h3 className="text-xl font-semibold mb-4 text-white">Tech Focus</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {hackathon.tech_focus.map((tech, i) => (
-                          <span key={i} className="bg-white/10 text-white px-4 py-2 rounded-xl text-sm font-medium border border-white/5">
-                            {tech}
+                      <h3 className="font-display text-lg font-semibold tracking-tight">Tech focus</h3>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {hackathon.tech_focus.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 text-[12px] text-foreground"
+                          >
+                            {t}
                           </span>
                         ))}
                       </div>
@@ -157,135 +190,171 @@ export default function HackathonDetailPage() {
                   )}
                 </div>
               )}
-
               {activeTab === "prizes" && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h3 className="text-xl font-semibold text-white mb-2">Simulated Prize Categories</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 rounded-2xl p-6">
-                      <div className="text-amber-400 font-bold text-2xl mb-1">1st Place</div>
-                      <div className="text-4xl text-white font-extrabold mb-3">$10,000</div>
-                      <p className="text-amber-200/70 text-sm">Plus exclusive mentorship and fast-track interviews.</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-slate-400/20 to-slate-500/10 border border-slate-400/30 rounded-2xl p-6">
-                      <div className="text-slate-300 font-bold text-2xl mb-1">2nd Place</div>
-                      <div className="text-4xl text-white font-extrabold mb-3">$5,000</div>
-                      <p className="text-slate-300/70 text-sm">Premium software licenses and gear.</p>
-                    </div>
+                <div className="animate-fade-up">
+                  <h3 className="font-display text-lg font-semibold tracking-tight">Prize pool</h3>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <PrizeTier tier="1st place" amount="$10,000" note="Mentorship + fast-track interviews." tone="ember" />
+                    <PrizeTier tier="2nd place" amount="$5,000" note="Premium licenses and gear." tone="mint" />
                   </div>
                 </div>
               )}
-
               {activeTab === "rules" && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h3 className="text-xl font-semibold text-white">General Rules</h3>
-                  <ul className="space-y-4">
+                <div className="animate-fade-up">
+                  <h3 className="font-display text-lg font-semibold tracking-tight">The fine print</h3>
+                  <ul className="mt-4 space-y-3 text-[14px] text-muted-foreground">
                     {[
-                      "All code must be written during the hackathon period.",
-                      "Teams must consist of the specified limits.",
-                      "Use of open source libraries is permitted and encouraged.",
-                      "Your project must align with the thematic tracks.",
-                      "Be respectful and follow the code of conduct."
-                    ].map((rule, idx) => (
-                      <li key={idx} className="flex gap-3 text-neutral-300 items-start">
-                        <CheckCircle className="text-violet-500 shrink-0 mt-0.5" size={20} />
-                        <span>{rule}</span>
+                      "All code must be written during the hackathon window.",
+                      "Team sizes must respect the posted limits.",
+                      "Open-source libraries are welcome and encouraged.",
+                      "Submissions must align with the posted themes.",
+                      "Be a decent human — follow the code of conduct.",
+                    ].map((r, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <CheckCircle size={14} className="mt-0.5 shrink-0 text-[color-mix(in_oklch,var(--mint)_85%,white)]" />
+                        <span>{r}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
-
               {activeTab === "schedule" && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h3 className="text-xl font-semibold text-white">Event Timeline</h3>
-                  <div className="border-l border-white/10 ml-3 space-y-6 pb-4">
-                    <div className="relative pl-8">
-                      <div className="absolute w-3 h-3 bg-violet-500 rounded-full -left-1.5 top-1.5 shadow-[0_0_10px_rgba(139,92,246,0.8)]" />
-                      <div className="text-sm text-violet-400 font-medium mb-1">{new Date(hackathon.start_date).toLocaleDateString()}</div>
-                      <div className="text-white font-semibold text-lg">Hacking Begins</div>
-                      <div className="text-neutral-400 text-sm">Opening ceremony and team formation.</div>
-                    </div>
-                    <div className="relative pl-8">
-                      <div className="absolute w-3 h-3 bg-neutral-600 rounded-full -left-1.5 top-1.5" />
-                      <div className="text-sm text-neutral-400 font-medium mb-1">Midpoint</div>
-                      <div className="text-white font-semibold text-lg">Check-ins & Mentoring</div>
-                      <div className="text-neutral-400 text-sm">Progress reviews with mentors.</div>
-                    </div>
-                    <div className="relative pl-8">
-                      <div className="absolute w-3 h-3 bg-emerald-500 rounded-full -left-1.5 top-1.5 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                      <div className="text-sm text-emerald-400 font-medium mb-1">{new Date(hackathon.end_date).toLocaleDateString()}</div>
-                      <div className="text-white font-semibold text-lg">Submissions Close</div>
-                      <div className="text-neutral-400 text-sm">Final presentations and judging.</div>
-                    </div>
-                  </div>
+                <div className="animate-fade-up">
+                  <h3 className="font-display text-lg font-semibold tracking-tight">Timeline</h3>
+                  <ol className="mt-5 space-y-5 border-l border-white/[0.08] pl-5">
+                    <TimelineItem
+                      date={start.toLocaleDateString()}
+                      title="Hacking begins"
+                      body="Opening ceremony and team formation."
+                      color="var(--ember)"
+                    />
+                    <TimelineItem
+                      date="Midpoint"
+                      title="Check-ins & mentoring"
+                      body="Progress reviews with mentors."
+                      color="oklch(0.6 0.01 60)"
+                    />
+                    <TimelineItem
+                      date={end.toLocaleDateString()}
+                      title="Submissions close"
+                      body="Final presentations and judging."
+                      color="var(--mint)"
+                    />
+                  </ol>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Sidebar / Quick Stats */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md">
-                <button 
+          {/* Sidebar */}
+          <aside className="lg:col-span-1">
+            <div className="sticky top-24 space-y-5">
+              <div className="rounded-3xl border border-white/[0.06] bg-card/60 p-6 shadow-soft backdrop-blur-sm">
+                <button
                   onClick={handleJoin}
-                  className="w-full bg-white hover:bg-neutral-200 text-black font-semibold py-4 px-6 rounded-2xl mb-6 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] flex justify-center items-center gap-2 text-lg"
+                  disabled={joining}
+                  className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-[linear-gradient(135deg,oklch(0.82_0.16_55),oklch(0.68_0.2_25))] py-3.5 text-sm font-medium text-white shadow-ember transition-transform hover:-translate-y-px disabled:opacity-60"
                 >
-                  Join Hackathon
+                  {joining ? "Joining…" : "Join hackathon"}
                 </button>
-                
-                <div className="space-y-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                      <Calendar className="text-violet-400" size={20} />
-                    </div>
-                    <div>
-                      <div className="text-sm text-neutral-400">Dates</div>
-                      <div className="font-medium text-white">{new Date(hackathon.start_date).toLocaleDateString()} - {new Date(hackathon.end_date).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                      <MapPin className="text-emerald-400" size={20} />
-                    </div>
-                    <div>
-                      <div className="text-sm text-neutral-400">Location</div>
-                      <div className="font-medium text-white capitalize">{hackathon.location}</div>
-                    </div>
-                  </div>
 
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                      <Users className="text-blue-400" size={20} />
-                    </div>
-                    <div>
-                      <div className="text-sm text-neutral-400">Team Size</div>
-                      <div className="font-medium text-white">{hackathon.min_team_size || 2} - {hackathon.max_team_size || 4} members</div>
-                    </div>
-                  </div>
-
+                <div className="mt-6 space-y-4 text-sm">
+                  <SidebarRow icon={<Calendar size={14} />} label="Dates">
+                    {start.toLocaleDateString()} – {end.toLocaleDateString()}
+                  </SidebarRow>
+                  <SidebarRow icon={<MapPin size={14} />} label="Location">
+                    <span className="capitalize">{hackathon.location}</span>
+                  </SidebarRow>
+                  <SidebarRow icon={<Users size={14} />} label="Team size">
+                    {hackathon.min_team_size || 2} – {hackathon.max_team_size || 4} members
+                  </SidebarRow>
                   {hackathon.website_url && (
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                        <Globe className="text-pink-400" size={20} />
-                      </div>
-                      <div>
-                        <div className="text-sm text-neutral-400">Website</div>
-                        <Link href={hackathon.website_url} target="_blank" className="font-medium text-white flex items-center gap-1 hover:text-pink-400 transition-colors">
-                          Visit Site <ExternalLink size={14} />
-                        </Link>
-                      </div>
-                    </div>
+                    <SidebarRow icon={<Globe size={14} />} label="Website">
+                      <Link
+                        href={hackathon.website_url}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 text-foreground transition-colors hover:text-ember-gradient"
+                      >
+                        Visit <ExternalLink size={11} />
+                      </Link>
+                    </SidebarRow>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-          
+          </aside>
         </div>
+      </Container>
+    </div>
+  );
+}
+
+function SidebarRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/[0.06] bg-white/[0.03] text-muted-foreground">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+        <p className="mt-0.5 text-[13px] text-foreground">{children}</p>
       </div>
     </div>
+  );
+}
+
+function PrizeTier({
+  tier,
+  amount,
+  note,
+  tone,
+}: {
+  tier: string;
+  amount: string;
+  note: string;
+  tone: "ember" | "mint";
+}) {
+  const tint =
+    tone === "ember"
+      ? "from-[color-mix(in_oklch,var(--ember)_16%,transparent)]"
+      : "from-[color-mix(in_oklch,var(--mint)_16%,transparent)]";
+  return (
+    <div className={`rounded-2xl border border-white/[0.06] bg-gradient-to-br ${tint} to-transparent p-5`}>
+      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{tier}</p>
+      <p className="mt-2 font-display text-3xl font-semibold tracking-tight">{amount}</p>
+      <p className="mt-2 text-[12px] text-muted-foreground">{note}</p>
+    </div>
+  );
+}
+
+function TimelineItem({
+  date,
+  title,
+  body,
+  color,
+}: {
+  date: string;
+  title: string;
+  body: string;
+  color: string;
+}) {
+  return (
+    <li className="relative">
+      <span
+        className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-[3px] border-background"
+        style={{ backgroundColor: color, boxShadow: `0 0 14px ${color}` }}
+      />
+      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{date}</p>
+      <p className="mt-0.5 font-display text-base font-semibold">{title}</p>
+      <p className="mt-0.5 text-[12px] text-muted-foreground">{body}</p>
+    </li>
   );
 }

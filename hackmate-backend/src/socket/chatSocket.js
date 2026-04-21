@@ -79,12 +79,20 @@ const setupSocket = (io) => {
       }
 
       // Redis-backed per-user message rate limit (60 msg/min)
-      const msgKey   = `ratelimit:message:${socket.user.id}`;
-      const msgCount = await redis.incr(msgKey);
-      if (msgCount === 1) await redis.expire(msgKey, 60);
-      if (msgCount > 60) {
-        socket.emit('error', { message: 'Slow down! Max 60 messages per minute.' });
-        return respond({ ok: false, error: 'rate_limited' });
+      // Gracefully skip if Redis is unavailable
+      if (redis.isReady()) {
+        try {
+          const msgKey   = `ratelimit:message:${socket.user.id}`;
+          const msgCount = await redis.incr(msgKey);
+          if (msgCount === 1) await redis.expire(msgKey, 60);
+          if (msgCount > 60) {
+            socket.emit('error', { message: 'Slow down! Max 60 messages per minute.' });
+            return respond({ ok: false, error: 'rate_limited' });
+          }
+        } catch (redisErr) {
+          // Redis failed mid-command – skip rate limiting, don't block the message
+          console.warn('Redis rate-limit check failed, skipping:', redisErr.message);
+        }
       }
 
       try {

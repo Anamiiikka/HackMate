@@ -13,7 +13,7 @@ const authenticateToken = async (req, res, next) => {
 
     // confirm user still exists and is active
     const result = await pool.query(
-      'SELECT id, name, email FROM users WHERE id = $1 AND is_active = TRUE',
+      'SELECT id, name, email, is_admin, is_premium FROM users WHERE id = $1 AND is_active = TRUE',
       [decoded.userId]
     );
     if (result.rows.length === 0)

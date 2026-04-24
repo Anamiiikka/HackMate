@@ -8,7 +8,8 @@ const getMyProfile = async (req, res) => {
 
     const userResult = await pool.query(
       `SELECT id, name, email, bio, github_url, linkedin_url,
-              timezone, location, experience_level, avatar_url, created_at
+              timezone, location, experience_level, avatar_url, created_at,
+              is_admin, is_premium
        FROM users WHERE id = $1`,
       [id]
     );

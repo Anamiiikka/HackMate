@@ -33,7 +33,7 @@ const register = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (name, email, password_hash)
        VALUES ($1, $2, $3)
-       RETURNING id, name, email, created_at`,
+       RETURNING id, name, email, is_admin, is_premium, created_at`,
       [name, email, password_hash]
     );
     const user = result.rows[0];
@@ -53,7 +53,7 @@ const register = async (req, res) => {
 
     return res.status(201).json({
       message: 'Account created successfully',
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin || false, is_premium: user.is_premium || false },
       access_token,
       refresh_token
     });
@@ -97,7 +97,7 @@ const login = async (req, res) => {
     );
 
     return res.status(200).json({
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin, is_premium: user.is_premium },
       access_token,
       refresh_token
     });

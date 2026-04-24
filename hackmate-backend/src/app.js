@@ -64,6 +64,7 @@ app.use('/api/v1/requests',      require('./routes/requests'));
 app.use('/api/v1/conversations', require('./routes/conversations'));
 app.use('/api/v1/teams', teamRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/admin',         require('./routes/admin'));
 
 // ── WebSocket ─────────────────────────────────────────
 setupSocket(io);

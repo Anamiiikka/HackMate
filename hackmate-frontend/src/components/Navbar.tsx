@@ -12,6 +12,8 @@ interface User {
   id: string;
   name: string;
   avatar_url?: string | null;
+  is_admin?: boolean;
+  is_premium?: boolean;
 }
 
 const publicLinks = [{ href: "/", label: "Explore" }];
@@ -71,7 +73,7 @@ export default function Navbar() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
-  const links = user ? authedLinks : publicLinks;
+  const links = user ? (user.is_admin ? [] : authedLinks) : publicLinks;
   const displayName = user?.name || "";
   const initial = displayName.charAt(0).toUpperCase() || "H";
   const firstName = displayName.split(" ")[0] || "there";
@@ -106,15 +108,35 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+          {user?.is_admin && (
+            <Link
+              href="/admin"
+              className={cn(
+                "relative rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--ember)]",
+                isActive("/admin")
+                  ? "text-foreground"
+                  : "hover:text-foreground",
+              )}
+            >
+              {isActive("/admin") && (
+                <span className="absolute inset-0 -z-10 rounded-full bg-white/[0.07]" />
+              )}
+              Admin Dashboard
+            </Link>
+          )}
+          {!user?.is_admin && (
+            <button
+              onClick={() => {
+                setShowListHackathonPopup(true);
+              }}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-white/[0.06]"
+            >
+              <Sparkles size={12} className="text-[var(--ember)]" />
+              List a Hackathon
+            </button>
+          )}
         </nav>
 
-          <button
-            onClick={() => setShowListHackathonPopup(true)}
-            className="hidden items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-white/[0.06] md:flex"
-          >
-            <Sparkles size={14} className="text-[var(--ember)]" />
-            List a Hackathon
-          </button>
         <div className="flex items-center gap-2">
           {user ? (
             <>
@@ -192,7 +214,7 @@ export default function Navbar() {
       {/* Mobile nav row */}
       {user && (
         <div className="mx-auto flex w-full max-w-6xl items-center gap-2 overflow-x-auto px-5 pb-2 sm:px-6 md:hidden">
-          {authedLinks.map((l) => (
+          {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -206,8 +228,27 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+          {user?.is_admin && (
+            <Link
+              href="/admin"
+              className={cn(
+                "whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors text-[var(--ember)]",
+                isActive("/admin")
+                  ? "bg-white/[0.07] text-foreground"
+                  : "hover:text-foreground",
+              )}
+            >
+              Admin Dashboard
+            </Link>
+          )}
           <button
-            onClick={() => setShowListHackathonPopup(true)}
+            onClick={() => {
+              if (user?.is_admin) {
+                router.push("/admin");
+              } else {
+                setShowListHackathonPopup(true);
+              }
+            }}
             className="whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             List a Hackathon

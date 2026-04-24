@@ -30,6 +30,16 @@ const sendRequest = async (req, res) => {
     if (userCheck.rows.length === 0)
       return res.status(404).json({ error: 'User not found' });
 
+    // 2.5 check if user has already sent 3 requests
+    const requestCountResult = await client.query(
+      `SELECT COUNT(*) FROM match_requests WHERE from_user_id = $1`,
+      [fromUserId]
+    );
+
+    if (parseInt(requestCountResult.rows[0].count) >= 3) {
+      return res.status(403).json({ error: 'LIMIT_REACHED', message: 'You have reached the maximum number of matches (3).' });
+    }
+
     // 3. check no existing pending/accepted request between this pair
     const existing = await client.query(
       `SELECT id, status FROM match_requests
@@ -364,6 +374,16 @@ const sendConnectionRequest = async (req, res) => {
     );
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Check if user has already sent 3 requests
+    const requestCountResult = await pool.query(
+      `SELECT COUNT(*) FROM match_requests WHERE from_user_id = $1`,
+      [senderId]
+    );
+
+    if (parseInt(requestCountResult.rows[0].count) >= 3) {
+      return res.status(403).json({ error: 'LIMIT_REACHED', message: 'You have reached the maximum number of matches (3).' });
     }
 
     // Check if a pending/accepted request already exists between these two users

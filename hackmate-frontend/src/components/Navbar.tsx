@@ -27,6 +27,7 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showListHackathonPopup, setShowListHackathonPopup] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -107,6 +108,13 @@ export default function Navbar() {
           ))}
         </nav>
 
+          <button
+            onClick={() => setShowListHackathonPopup(true)}
+            className="hidden items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-white/[0.06] md:flex"
+          >
+            <Sparkles size={14} className="text-[var(--ember)]" />
+            List a Hackathon
+          </button>
         <div className="flex items-center gap-2">
           {user ? (
             <>
@@ -198,6 +206,39 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+          <button
+            onClick={() => setShowListHackathonPopup(true)}
+            className="whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            List a Hackathon
+          </button>
+        </div>
+      )}
+
+      {showListHackathonPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-white/[0.08] bg-card p-6 shadow-soft animate-fade-up">
+            <h3 className="font-display text-2xl font-semibold text-foreground">List your Hackathon</h3>
+            <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+              Listing a hackathon requires a one-time payment of ₹199. Please fill out the form below to complete the payment and get your hackathon featured.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                onClick={() => setShowListHackathonPopup(false)}
+                className="rounded-full border border-white/[0.08] bg-transparent px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/[0.04]"
+              >
+                Cancel
+              </button>
+              <Link
+                href="https://forms.gle/AuwSKnRSKD5nrkED9"
+                target="_blank"
+                onClick={() => setShowListHackathonPopup(false)}
+                className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,oklch(0.82_0.16_55),oklch(0.68_0.2_25))] px-5 py-2.5 text-sm font-medium text-white shadow-ember transition-transform hover:-translate-y-px"
+              >
+                Continue to form
+              </Link>
+            </div>
+          </div>
         </div>
       )}
     </header>
